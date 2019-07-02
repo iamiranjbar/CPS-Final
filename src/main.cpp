@@ -3,7 +3,7 @@
 
 #define AmpMax (512)
 #define MicSamples (1024*2)
-#define VolumeGainFactorBits 0
+#define VolumeGainFactorBits 1
 #define SOUND_SPEED 343
 #define MICRO_TO_MILI 1000
 #define FHT_N 256 // set to 256 point fht
@@ -58,6 +58,7 @@ int MeasureVolume(int id)
         int k = analogRead(micPins[id]);
 
         int amp = abs(k - micDCs[id]);
+        amp <<= VolumeGainFactorBits;
         soundVolMax = max(soundVolMax, amp);
         soundVolAvg += amp;
         soundVolRMS += ((long)amp*amp);

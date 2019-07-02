@@ -52,17 +52,12 @@ void calculateEnvDC()
 
 int MeasureVolume(int id)
 {
-    // @TODO: Remove it
-    if (id != 2)
-        return -1;
-
     long soundVolAvg = 0, soundVolMax = 0, soundVolRMS = 0, t0 = millis();
     for (int i = 0; i < MicSamples; i++)
     {
         int k = analogRead(micPins[id]);
 
         int amp = abs(k - micDCs[id]);
-        // amp <<= VolumeGainFactorBits;
         soundVolMax = max(soundVolMax, amp);
         soundVolAvg += amp;
         soundVolRMS += ((long)amp*amp);
@@ -76,17 +71,6 @@ int MeasureVolume(int id)
     soundVolMax = 100 * soundVolMax / AmpMax; 
     soundVolRMSflt = 100 * soundVolRMSflt / AmpMax;
     soundVolRMS = 10 * soundVolRMSflt / 7;
- 
-    if (id == 2)
-    {
-        Serial.println("********************************************");
-        Serial.print("Time: " + String(millis() - t0));
-        Serial.print(" Amp: Max: " + String(soundVolMax));
-        Serial.print(" % Avg: " + String(soundVolAvg));
-        Serial.print(" % RMS: " + String(soundVolRMS));
-        Serial.println(" % dB: " + String(dB,3));
-        Serial.println("********************************************");
-    }
     return soundVolMax;
 }
 
@@ -94,11 +78,9 @@ void readMicData()
 {
     for (int i=0; i<4; i++) 
     {
-        Serial.println("isDetected[" + String(i) + "]: " + isDetected[i]);
         if (isDetected[i] == true)
-        {
             continue;
-        }
+ 
         micAnalogData[i] = MeasureVolume(i);
         isDetected[i] = (abs(prevMicData[i] - micAnalogData[i]) > 0) ? true : false;
         if (isDetected[i])
@@ -127,10 +109,6 @@ void resetAllDetections()
 {
     for (int i = 0; i < 4; i++)
     {
-        // @TODO: Remove it
-        if (i != 2)
-            continue;
-
         isDetected[i] = false;
         micDetectTime[i] = 0;
     }
@@ -140,10 +118,6 @@ void calculateAngles()
 {
     for (int i = 0; i < 4; i++)
     {   
-        // @TODO: Remove it
-        if (i != 2)
-            continue;
-
         Serial.print("micDetectTime: ");
         Serial.println(micDetectTime[i]);
         unsigned long diff = measureStartTime - micDetectTime[i];
@@ -194,14 +168,10 @@ void setup()
 
 void loop() 
 {   
-    Serial.println("%%%%%%%%%%%%%");
     measureStartTime = micros();
 
     while (micros() - measureStartTime < SENSE_TIME)
-    {
-        Serial.println("$$$$$$$$$");
         readMicData();
-    }
 
     finalizeMicDetectTime();
 

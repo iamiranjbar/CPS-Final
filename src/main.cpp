@@ -4,6 +4,8 @@
 #define AmpMax (512)
 #define MicSamples (1024*2) // Three of these time-weightings have been internationally standardised, 'S' (1 s) originally called Slow, 'F' (125 ms) originally called Fast and 'I' (35 ms) originally called Impulse.
 #define VolumeGainFactorBits 0
+#define SOUND_SPEED 343
+#define MICRO_TO_MILI 1000
 #define FHT_N 256 // set to 256 point fht
 #define MAX_X 120
 #define MIN_X 60
@@ -19,6 +21,7 @@ int prevMicData[4] = {0,0,0,0};
 int micAnalogData[4] = {0,0,0,0};
 int micDCs[4] = {0,0,0,0};
 long micDetectTime[4] = {0,0,0,0};
+float micDistances[4] = {0, 0, 0, 0};
 uint8_t micPins[4] = {A0, A1, A2, A3};
 int horizontalMicDiffs = 0;
 int verticalMicDiffs = 0;
@@ -33,11 +36,11 @@ int calculateEnvDC()
         while (soundVolAvg != prevAvg || sampleCount < 1024)
         {
             prevAvg = soundVolAvg;
-            int amp = analogRead(pin);
+            int amp = analogRead(micPins[i]);
             amp <<= VolumeGainFactorBits;
             soundSum += amp;
             sampleCount += 1;
-            soundVolAvg = soundSum / sampleCountl
+            soundVolAvg = soundSum / sampleCount;
         }
         micDCs[i] = soundVolAvg;
     }
@@ -110,11 +113,22 @@ void resetAllDetections()
 
 void calculateAngles()
 {
-    Serial.print(constrain(horizontalMicDiffs, -200, 200));
-    Serial.print(":");
-    Serial.print(constrain(verticalMicDiffs, -200, 200));
-    Serial.println("&");
-    delay(1000);
+    for (int i = 0; i < 4; i++)
+        micDistances[i] = micDetectTime[i] * SOUND_SPEED * MICRO_TO_MILI;
+
+    bool isPlusY = (micDistances[2] > micDistances[0]);
+    bool isPlusX = (micDistances[3] > micDistances[1]);
+
+    if (isPlusX)
+    {
+        horizontalAngle = 
+    }
+
+    // Serial.print(constrain(horizontalMicDiffs, -200, 200));
+    // Serial.print(":");
+    // Serial.print(constrain(verticalMicDiffs, -200, 200));
+    // Serial.println("&");
+    // delay(1000);
     // Serial.println(millis());
     // previousParameters[0] += constrain(horizontalMicDiffs, -200, 200) * 4;
     // previousParameters[1] += constrain(verticalMicDiffs, -200, 200) * 4;

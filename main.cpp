@@ -10,7 +10,6 @@
 #define MAX_Y 120
 #define MIN_Y 85
 #define PERIOD 10
-#define INIT_SAMPLES (1024*8)
 
 Servo verticalMotor;
 Servo horizontalMotor;
@@ -29,26 +28,27 @@ int calculateEnvDC()
 {   
     for (int i = 0; i < 4; i++)
     {
-        long soundVolAvg = 0, soundVolMax = 0;
-        while (/* condition */)
+        long prevAvg = -1, soundVolAvg = 0, soundSum = 0, sampleCount = 0;
+        while (soundVolAvg != prevAvg || sampleCount < 1024)
         {
-            int k = analogRead(pin);
-            int amp = abs(k - AmpMax); // AmpMax => Environment DC
+            prevAvg = soundVolAvg;
+            int amp = analogRead(pin);
             amp <<= VolumeGainFactorBits;
-            soundVolMax = max(soundVolMax, amp);
-            soundVolAvg += amp;
-            soundVolRMS += ((long)amp*amp);
+            soundSum += amp;
+            sampleCount += 1;
+            soundVolAvg = soundSum / sampleCountl
         }
+        micDCs[i] = soundVolAvg;
     }
 }
 
-int MeasureVolume(int pin)
+int MeasureVolume(int id)
 {
     long soundVolAvg = 0, soundVolMax = 0, soundVolRMS = 0, t0 = millis();
     for (int i = 0; i < MicSamples; i++)
     {
-        int k = analogRead(pin);
-        int amp = abs(k - AmpMax); // AmpMax => Environment DC
+        int k = analogRead(micPins[id]);
+        int amp = abs(k - micDCs[id]);
         amp <<= VolumeGainFactorBits;
         soundVolMax = max(soundVolMax, amp);
         soundVolAvg += amp;
@@ -62,7 +62,7 @@ int MeasureVolume(int pin)
     soundVolAvg = 100 * soundVolAvg / AmpMax; 
     soundVolMax = 100 * soundVolMax / AmpMax; 
     soundVolRMSflt = 100 * soundVolRMSflt / AmpMax;
-    soundVolRMS = 10 * soundVolRMSflt / 7; // RMS to estimate peak (RMS is 0.7 of the peak in sin)
+    soundVolRMS = 10 * soundVolRMSflt / 7;
  
     Serial.println("********************************************");
     Serial.print("Time: " + String(millis() - t0));
@@ -71,7 +71,7 @@ int MeasureVolume(int pin)
     Serial.print(" % RMS: " + String(soundVolRMS));
     Serial.println(" % dB: " + String(dB,3));
     Serial.println("********************************************");
-    return soundVolMax; // TODO: Set detection 
+    return soundVolMax;
 }
 
 void readMicData()
@@ -82,7 +82,7 @@ void readMicData()
         {
             continue;
         }
-        micAnalogData[i] = MeasureVolume(micPins[i]);
+        micAnalogData[i] = MeasureVolume(i);
         isDetected[i] = (abs(prevMicData[i] - micAnalogData[i]) > 0) ? true : false;
         prevMicData[i] = micAnalogData[i];
     }
@@ -145,23 +145,12 @@ void setup()
     Serial.begin(9600);
     verticalMotor.attach(9);
     horizontalMotor.attach(10);
-    // TODO: Calculate DC of enviroment
+    calculateEnvDC();
 }
 
 void loop() 
 {
     readMicData();
-
-
-
-    Serial.println("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
-    for (int i = 0; i < 4; i++)
-    {
-        Serial.println(isDetected[i]);
-    }
-    Serial.println(horizontalMicDiffs);
-    Serial.println(verticalMicDiffs);
-    Serial.println("VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
     if (!isDetected[0] || !isDetected[1] || !isDetected[2] || !isDetected[3])
     {
         // track diff between mic 1 and 2

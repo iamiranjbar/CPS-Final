@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 #define AmpMax (512)
-#define MicSamples (1024*2) // Three of these time-weightings have been internationally standardised, 'S' (1 s) originally called Slow, 'F' (125 ms) originally called Fast and 'I' (35 ms) originally called Impulse.
+#define MicSamples (1024*2)
 #define VolumeGainFactorBits 0
 #define SOUND_SPEED 343
 #define MICRO_TO_MILI 1000
@@ -11,7 +11,7 @@
 #define MIN_X 60
 #define MAX_Y 120
 #define MIN_Y 85
-#define PERIOD 10
+#define SENSE_TIME 100000 // Should be calculate precise
 
 Servo verticalMotor;
 Servo horizontalMotor;
@@ -20,8 +20,8 @@ int horizontalAngle;
 int prevMicData[4] = {0,0,0,0};
 int micAnalogData[4] = {0,0,0,0};
 int micDCs[4] = {0,0,0,0};
-long micDetectTime[4] = {0,0,0,0};
 float micDistances[4] = {0, 0, 0, 0};
+long micDetectTime[4] = {-1,-1,-1,-1};
 uint8_t micPins[4] = {A0, A1, A2, A3};
 int horizontalMicDiffs = 0;
 int verticalMicDiffs = 0;
@@ -88,9 +88,20 @@ void readMicData()
         }
         micAnalogData[i] = MeasureVolume(i);
         isDetected[i] = (abs(prevMicData[i] - micAnalogData[i]) > 0) ? true : false;
+        if (isDetected[i])
+            micDetectTime[i] = micros();
         prevMicData[i] = micAnalogData[i];
     }
     measureCount++; 
+}
+
+void finalizeMicDetectTime()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (micDetectTime[i] == -1)
+            micDetectTime[i] = micros();
+    }
 }
 
 boolean allDetected()
@@ -108,6 +119,7 @@ void resetAllDetections()
     for (int i = 0; i < 4; i++)
     {
         isDetected[i] = false;
+        micDetectTime[i] = -1;
     }
 }
 
@@ -151,7 +163,7 @@ void resetDiffs()
     horizontalMicDiffs = 0;
     verticalMicDiffs = 0;
 }
-    
+
 void setup() 
 { 
     verticalAngle = 140;
@@ -165,34 +177,11 @@ void setup()
 void loop() 
 {   
     int measureStartTime = micros();
-    while (micros() - measureStartTime)
+    while (micros() - measureStartTime < SENSE_TIME)
     {
         readMicData();
     }
-    if (!isDetected[0] || !isDetected[1] || !isDetected[2] || !isDetected[3])
-    {
-        // track diff between mic 1 and 2
-        if (isDetected[0] && !isDetected[1])
-        {
-            horizontalMicDiffs--;
-        }
-        if (isDetected[1] && !isDetected[0])
-        {
-            horizontalMicDiffs++;
-        }
-
-        // track diff between mic 2 and 3
-        if (isDetected[2] && !isDetected[3])
-        {
-            verticalMicDiffs--;
-        }
-        if (isDetected[3] && !isDetected[4])
-        {
-            verticalMicDiffs++;
-        }
-
-    }
-
+    finalizeMicDetectTime();
     if (allDetected() || reachedTreshold())
     {
         resetAllDetections();
@@ -201,6 +190,4 @@ void loop()
         shoot();
         resetDiffs();
     }
-
-    // delay(1000);
 }

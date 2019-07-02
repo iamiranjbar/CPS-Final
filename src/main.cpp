@@ -94,6 +94,7 @@ void readMicData()
 {
     for (int i=0; i<4; i++) 
     {
+        Serial.println("isDetected[" + String(i) + "]: " + isDetected[i]);
         if (isDetected[i] == true)
         {
             continue;
@@ -101,10 +102,7 @@ void readMicData()
         micAnalogData[i] = MeasureVolume(i);
         isDetected[i] = (abs(prevMicData[i] - micAnalogData[i]) > 0) ? true : false;
         if (isDetected[i])
-        {
             micDetectTime[i] = micros();
-            Serial.println("micDetectTime[" + String(i) + "]" + String(micDetectTime[i]));
-        }
 
         prevMicData[i] = micAnalogData[i];
     }
@@ -129,6 +127,10 @@ void resetAllDetections()
 {
     for (int i = 0; i < 4; i++)
     {
+        // @TODO: Remove it
+        if (i != 2)
+            continue;
+
         isDetected[i] = false;
         micDetectTime[i] = 0;
     }
@@ -138,10 +140,16 @@ void calculateAngles()
 {
     for (int i = 0; i < 4; i++)
     {   
+        // @TODO: Remove it
+        if (i != 2)
+            continue;
+
         Serial.print("micDetectTime: ");
         Serial.println(micDetectTime[i]);
-        micDistances[i] = micDetectTime[i] * SOUND_SPEED * MICRO_TO_MILI;
-        Serial.print("micDistances: ");
+        unsigned long diff = measureStartTime - micDetectTime[i];
+        Serial.println("Diff: " + String(diff));
+        micDistances[i] = diff * SOUND_SPEED * MICRO_TO_MILI;
+        Serial.print("micDistances: " + String(i));
         Serial.println(micDistances[i]);
     }
 
@@ -186,13 +194,17 @@ void setup()
 
 void loop() 
 {   
+    Serial.println("%%%%%%%%%%%%%");
     measureStartTime = micros();
 
     while (micros() - measureStartTime < SENSE_TIME)
+    {
+        Serial.println("$$$$$$$$$");
         readMicData();
+    }
 
     finalizeMicDetectTime();
-    
+
     if (allDetected())
     {
         calculateAngles();

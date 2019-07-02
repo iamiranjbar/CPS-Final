@@ -18,6 +18,7 @@ int horizontalAngle;
 int prevMicData[4] = {0,0,0,0};
 int micAnalogData[4] = {0,0,0,0};
 int micDCs[4] = {0,0,0,0};
+long micDetectTime[4] = {0,0,0,0};
 uint8_t micPins[4] = {A0, A1, A2, A3};
 int horizontalMicDiffs = 0;
 int verticalMicDiffs = 0;
@@ -86,8 +87,7 @@ void readMicData()
         isDetected[i] = (abs(prevMicData[i] - micAnalogData[i]) > 0) ? true : false;
         prevMicData[i] = micAnalogData[i];
     }
-    measureCount++;
-    
+    measureCount++; 
 }
 
 boolean allDetected()
@@ -149,8 +149,12 @@ void setup()
 }
 
 void loop() 
-{
-    readMicData();
+{   
+    int measureStartTime = micros();
+    while (micros() - measureStartTime)
+    {
+        readMicData();
+    }
     if (!isDetected[0] || !isDetected[1] || !isDetected[2] || !isDetected[3])
     {
         // track diff between mic 1 and 2

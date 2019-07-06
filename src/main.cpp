@@ -3,7 +3,7 @@
 
 #define AmpMax (512)
 #define MicSamples (1024 * 4)
-#define VolumeGainFactorBits 1
+#define VolumeGainFactorBits 2
 #define SOUND_SPEED 343
 #define MICRO_TO_MILI 1000
 #define FHT_N 256 // set to 256 point fht
@@ -11,12 +11,13 @@
 #define MIN_X 60
 #define MAX_Y 120
 #define MIN_Y 85
-#define SENSE_TIME 1000 // Should be calculate precise
+#define SENSE_TIME 100 // Should be calculate precise
 #define IN1 6
 #define IN2 7
 #define ENA 11
 #define LOADER_SPEED 250
 #define LOADER_TIME 790
+#define DELTA_ANGLE 5
 
 unsigned long micAnalogData[4] = {0,0,0,0};
 int prevMicData[4] = {0,0,0,0};
@@ -89,6 +90,11 @@ void readMicData()
  
         micAnalogData[i] = measureVolume(i);
         isDetected[i] = (abs(prevMicData[i] - micAnalogData[i]) > 0) ? true : false;
+        for (int i = 0; i < 4; i++)
+        {
+            Serial.println("isDetected[" + String(i) + "]: " + String(isDetected[i]) + "\t" + "DC: " + micDCs[i] + "\t\t" + "Analog: " + micAnalogData[i] + "\t\tprev: " + prevMicData[i]);
+        }
+        Serial.println("**********");
         if (isDetected[i])
             micDetectTime[i] = micros();
 
@@ -102,11 +108,11 @@ void finalizeMicDetectTime()
 {
     for (int i = 0; i < 4; i++)
     {
-        Serial.println("isDetected[" + String(i) + "]: " + String(isDetected[i]));
+        // Serial.println("isDetected[" + String(i) + "]: " + String(isDetected[i]) + "\t" + "DC: " + micDCs[i] + "\t\t" + "Analog: " + micAnalogData[i] + "\t\t\tprev: " + prevMicData[i]);
         if (micDetectTime[i] == 0)
             micDetectTime[i] = micros();
     }
-    Serial.println("**********");
+    // Serial.println("**********");
 }
 
 boolean allDetected()
@@ -142,29 +148,37 @@ void calculateAngles()
     if (isPlusX)
     {
         Serial.print("x < 0");
-        horizontalAngle = 120;
+        horizontalAngle += DELTA_ANGLE;
+        if (horizontalAngle > 120)
+            horizontalAngle = 120;
     }
     else
     {
         Serial.print("x > 0");
-        horizontalAngle = 60;
+        horizontalAngle -= DELTA_ANGLE;
+        if (horizontalAngle < 60)
+            horizontalAngle = 60;
     }
 
     if (isPlusY)
     {
         Serial.println(", y < 0");            
-        verticalAngle = 100;
+        verticalAngle += DELTA_ANGLE;
+        if (verticalAngle > 100)
+            verticalAngle = 100;
     }
     else
     {
         Serial.println(", y > 0") ;
-        verticalAngle = 80;
+        verticalAngle -= DELTA_ANGLE;
+        if (verticalAngle < 80)
+            verticalAngle = 80;
     }
 
-    // Serial.print("Angles: ");
-    // Serial.print(horizontalAngle);
-    // Serial.print(", ");
-    // Serial.println(verticalAngle);
+    Serial.print("Angles: ");
+    Serial.print(horizontalAngle);
+    Serial.print(", ");
+    Serial.println(verticalAngle);
 }
 
 void actuateMotors()
@@ -201,6 +215,7 @@ void setup()
 
 void loop() 
 {   
+    Serial.println("hellooo!");
     measureStartTime = micros();
 
     // resetAllDetections();
@@ -209,11 +224,11 @@ void loop()
 
     finalizeMicDetectTime();
 
-    if (allDetected())
-    {
+    // if (allDetected())
+    // {
         calculateAngles();
         actuateMotors();
         shoot();
         resetAllDetections();
-    }
+    // }
 }

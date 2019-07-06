@@ -12,6 +12,11 @@
 #define MAX_Y 120
 #define MIN_Y 85
 #define SENSE_TIME 1000 // Should be calculate precise
+#define IN1 6
+#define IN2 7
+#define ENA 11
+#define LOADER_SPEED 250
+#define LOADER_TIME 790
 
 unsigned long micAnalogData[4] = {0,0,0,0};
 int prevMicData[4] = {0,0,0,0};
@@ -172,7 +177,10 @@ void actuateMotors()
 
 void shoot()
 {
-
+    delay(750);
+    digitalWrite(IN2, HIGH);
+    delay(LOADER_TIME);
+    digitalWrite(IN2, LOW);
 }
 
 void setup() 
@@ -182,6 +190,12 @@ void setup()
     Serial.begin(9600);
     verticalMotor.attach(9);
     horizontalMotor.attach(10);
+    pinMode(ENA, OUTPUT);
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    analogWrite(ENA, LOADER_SPEED);
     calculateEnvDC();
 }
 
